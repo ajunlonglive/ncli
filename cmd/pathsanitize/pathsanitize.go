@@ -1,4 +1,4 @@
-package cmd
+package pathsanitize
 
 import (
 	"errors"
@@ -9,28 +9,27 @@ import (
 	"strings"
 )
 
-const keyword = ":"
+const LCOV_KEYWORD = ":"
 
 var trimString = ""
 var lcov = false
 
-var pathSanitize = &cobra.Command{
-	Use:     "path-sanitize",
-	Short:   "Change file paths from Windows style to Unix style",
-	Example: "ncli path-sanitize --lcov lcov.info",
-	Args:    cobra.ExactValidArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		err := fixPaths(args[0])
-		if err != nil {
-			log.Fatalln(err)
-		}
-	},
-}
-
-func init() {
-	pathSanitize.Flags().StringVarP(&trimString, "trim", "t", "", "Some substring to which will be strings trim to in every line. (example: trim 'bar' 'foo/bar/some'->'bar/some')")
-	pathSanitize.Flags().BoolVar(&lcov, "lcov", false, "Parsing file in lcov format")
-	RootCmd.AddCommand(pathSanitize)
+func CreateCommand() *cobra.Command {
+	command := &cobra.Command{
+		Use:     "path-sanitize",
+		Short:   "Change file paths from Windows style to Unix style",
+		Example: "ncli path-sanitize --lcov lcov.info",
+		Args:    cobra.ExactValidArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			err := fixPaths(args[0])
+			if err != nil {
+				log.Fatalln(err)
+			}
+		},
+	}
+	command.Flags().StringVarP(&trimString, "trim", "t", "", "Some substring to which will be strings trim to in every line. (example: trim 'bar' 'foo/bar/some'->'bar/some')")
+	command.Flags().BoolVar(&lcov, "lcov", false, "Parsing file in lcov format")
+	return command
 }
 
 func fixPaths(filename string) error {
@@ -78,8 +77,14 @@ func trimFrom(content []string) ([]string, error) {
 	log.Println("Trimming lines. Removing characters before '" + trimString + "' in line")
 	result := make([]string, 0, len(content))
 	for _, line := range content {
+		if len(line) == 0 {
+			continue
+		}
 		if lcov {
-			lcovIndex = strings.Index(line, keyword)
+			if line == "end_of_record" {
+				continue
+			}
+			lcovIndex = strings.Index(line, LCOV_KEYWORD)
 			if lcovIndex == -1 {
 				return nil, errors.New("lcov file is not the right format")
 			}

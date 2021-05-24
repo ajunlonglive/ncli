@@ -1,9 +1,14 @@
 package main
 
 import (
+	"log"
 	"netgrif.com/ncli/cmd"
 )
 
 func main() {
-	cmd.Execute()
+	root := cmd.NewRootCmd("")
+	err := root.Execute()
+	if err != nil {
+		log.Panic(err)
+	}
 }
